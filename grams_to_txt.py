@@ -7,6 +7,14 @@ class data_point():
         self.peak_height_list = list(a_range)
         self.datasum = datasum
 
+def input_func():
+    print('请输入文件夹路径：', end=' ')
+    filepath = input()
+    filepath = check_file_input_func(filepath) #检查文件夹路径末尾是否有不合格的'\''/'
+    print('请输入文件数：', end=' ')
+    filenum = int(input())
+    return filepath, filenum
+
 def check_file_input_func(filepath):
     #print('1 ', filepath)
     filepath = repr(filepath) #转换为python字符串，忽略转义字符
@@ -30,6 +38,36 @@ def eachfile(filepath,num):
     #print(child)
     return child
 
+def getalldata():
+    data_num = -1 #初始化总的行索引
+    finaldata = [] #初始化总数据列表，data_point
+    present_index = -1 #当前处理的行索引
+    for f in allfiles: #遍历所有文件
+        ff = open(f, 'r')
+        fname = f[f.rfind('/')+1:] #获取文件名
+        #print(fname)
+        get_pressure = getpressure(fname) #获得当前文件的压力
+        if get_pressure in dic_pster_to_num: 
+            present_index = dic_pster_to_num[get_pressure] #如果字典中有当前压力的键值对，找到对应行索引
+            finaldata[present_index].datasum = finaldata[present_index].datasum + 1 #该行压力对应的元素值总索引+1
+        else:
+            data_num = data_num + 1 #字典中没有当前压力的键值对，总索引数+1
+            dic_pster_to_num[get_pressure] = data_num #在字典中添加该键值对
+            finaldata.append(data_point(data_num, get_pressure, [], 0)) #初始化该行
+            present_index = data_num #当前处理的行索引为总索引数
+        x = 0
+        string = list(range(50))
+        for line in ff: #遍历该文件每一行
+            string[x] = line
+            if line.find('Height', 0, 6) != -1: #找到含有‘Height’这一行
+                string[x] = string[x].rstrip('\n ') #去除行尾空格和回车，一般没有
+                lphstr = string[x].rfind(' ') #找到值前的空格
+                phstr = string[x][lphstr:] #得到数字
+                finaldata[present_index].peak_height_list.append(phstr) #添加表元素表末尾     
+                break
+        #print(f,' ',float(phstr))   
+        ff.close() 
+    return finaldata
 
 def getpressure(fstr):
     bar_l = fstr.rfind('bar') #获取压力单位'bar'位置
@@ -68,40 +106,10 @@ def print_data(flist, filepath):
         ff.write('\n')
     ff.close
 
-print('请输入文件夹路径：', end=' ')
-filepath = input()
-filepath = check_file_input_func(filepath) #检查文件夹路径末尾是否有不合格的'\''/'
-print('请输入文件数：', end=' ')
-filenum = int(input())
-allfiles = eachfile(filepath, filenum) #提取所有文件的路径
+
+input_yz = input_func() #输入文件夹路径和文件数
+allfiles = eachfile(input_yz[0], input_yz[1]) #提取所有文件的路径
 #print(allfiles)
 dic_pster_to_num = {} #初始化查找字典
-data_num = -1 #初始化总的行索引
-finaldata = [] #初始化总数据列表，data_point
-present_index = -1 #当前处理的行索引
-for f in allfiles: #遍历所有文件
-    ff = open(f, 'r')
-    fname = f[f.rfind('/')+1:] #获取文件名
-    #print(fname)
-    get_pressure = getpressure(fname) #获得当前文件的压力
-    if get_pressure in dic_pster_to_num: 
-        present_index = dic_pster_to_num[get_pressure] #如果字典中有当前压力的键值对，找到对应行索引
-        finaldata[present_index].datasum = finaldata[present_index].datasum + 1 #该行压力对应的元素值总索引+1
-    else:
-        data_num = data_num + 1 #字典中没有当前压力的键值对，总索引数+1
-        dic_pster_to_num[get_pressure] = data_num #在字典中添加该键值对
-        finaldata.append(data_point(data_num, get_pressure, [], 0)) #初始化该行
-        present_index = data_num #当前处理的行索引为总索引数
-    x = 0
-    string = list(range(50))
-    for line in ff: #遍历该文件每一行
-        string[x] = line
-        if line.find('Height', 0, 6) != -1: #找到含有‘Height’这一行
-            string[x] = string[x].rstrip('\n ') #去除行尾空格和回车，一般没有
-            lphstr = string[x].rfind(' ') #找到值前的空格
-            phstr = string[x][lphstr:] #得到数字
-            finaldata[present_index].peak_height_list.append(phstr) #添加表元素表末尾     
-            break
-    #print(f,' ',float(phstr))   
-    ff.close() 
-print_data(finaldata, filepath)
+finaldata = getalldata() #获取所有数据
+print_data(finaldata, input_yz[0])
